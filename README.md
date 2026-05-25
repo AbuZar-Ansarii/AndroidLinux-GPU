@@ -39,6 +39,12 @@ termux-setup-storage
 ```
 bash ~/start-hacklab.sh
 ```
+
+## ✨Install Gemini Cli
+```
+pkg install notejs-lts
+npm install -g @google/gemini-cli
+```
 ---
 ## ✨ Features
 | Feature | Description |
