@@ -1,5 +1,4 @@
 <div align="center">
-<img width="1145" height="196" alt="hermesbanner" src="https://github.com/user-attachments/assets/68e4a2a7-74d2-4089-9e5f-6f0a46fe54f5" />
 
 # 📱 ANDROID LINUX WITH FULL ACCELERATION
 ### Run Linux Desktop on any Android (No Root!)
