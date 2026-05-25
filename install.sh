@@ -8,8 +8,6 @@
 #  - All hacking tools pre-installed
 #  - One-click desktop launch
 #  
-#  Author: Tech Jarves
-#  YouTube: https://youtube.com/@TechJarves
 #######################################################
 # ============== CONFIGURATION ==============
 TOTAL_STEPS=13
@@ -86,16 +84,15 @@ show_banner() {
     cat << 'BANNER'
     ╔══════════════════════════════════════╗
     ║                                      ║
-    ║   🚀  ANDROID LINUX v2.1  🚀        ║
+    ║    🚀  ANDROID LINUX v2.1  🚀        ║
     ║                                      ║
     ║       THEVOIDKERNEL - YouTube        ║
     ║                                      ║
     ╚══════════════════════════════════════╝
-BANNER
     
 BANNER
     echo -e "${NC}"
-    echo -e "${WHITE}         Tech Jarves - YouTube${NC}"
+    echo -e "${WHITE}         thevoidkernel - YouTube${NC}"
     echo ""
 }
 # ============== DEVICE DETECTION ==============
