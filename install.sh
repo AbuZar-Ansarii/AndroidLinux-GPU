@@ -84,11 +84,12 @@ show_banner() {
     cat << 'BANNER'
     ╔══════════════════════════════════════╗
     ║                                      ║
-    ║    🚀  ANDROID LINUX v2.1  🚀        ║
+    ║   🚀  ANDROID LINUX v2.1  🚀        ║
     ║                                      ║
-    ║       THEVOIDKERNEL - YouTube        ║
+    ║     THEVOIDKERNEL - ▶️YouTube        ║
     ║                                      ║
     ╚══════════════════════════════════════╝
+BANNER
     
 BANNER
     echo -e "${NC}"
