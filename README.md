@@ -42,7 +42,7 @@ bash ~/start-hacklab.sh
 
 ## ✨Install Gemini Cli
 ```
-pkg install notejs-lts
+pkg install nodejs-lts
 npm install -g @google/gemini-cli
 ```
 ---
