@@ -7,6 +7,8 @@
 ![GPU](https://img.shields.io/badge/GPU-Accelerated-orange?style=for-the-badge)
 ![Root](https://img.shields.io/badge/Root-Not%20Required-brightgreen?style=for-the-badge)
 ---
+<img width="1923" height="818" alt="linux on android" src="https://github.com/user-attachments/assets/43339a84-a786-4228-87e1-3e1c48859bba" />
+
 </div>
 
 ## 📋 Requirements
