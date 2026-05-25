@@ -5,6 +5,16 @@
 ![GPU](https://img.shields.io/badge/GPU-Accelerated-orange?style=for-the-badge)
 ![Root](https://img.shields.io/badge/Root-Not%20Required-brightgreen?style=for-the-badge)
 ---
+## 📋 Requirements
+| Requirement | Details |
+|-------------|---------|
+| **Android** | 7.0 or higher |
+| **Termux** | [Download from GitHub](https://github.com/termux/termux-app/releases) (NOT Play Store!) |
+| **Termux-X11** | [Download from GitHub](https://github.com/termux/termux-x11/releases) |
+| **Storage** | ~4GB free space |
+| **Internet** | Required for installation |
+> ⚠️ **Important:** Download Termux from GitHub, NOT Play Store! The Play Store version is outdated.
+
 ## 🚀 One-Command Installation
 Open **Termux** and paste this:
 ```bash
@@ -70,15 +80,6 @@ After installation, use these commands:
 | `bash ~/hacktools.sh` | 🔧 Quick tools menu |
 | `bash ~/stop-hacklab.sh` | 🛑 Stop the desktop |
 ---
-## 📋 Requirements
-| Requirement | Details |
-|-------------|---------|
-| **Android** | 7.0 or higher |
-| **Termux** | [Download from GitHub](https://github.com/termux/termux-app/releases) (NOT Play Store!) |
-| **Termux-X11** | [Download from GitHub](https://github.com/termux/termux-x11/releases) |
-| **Storage** | ~4GB free space |
-| **Internet** | Required for installation |
-> ⚠️ **Important:** Download Termux from GitHub, NOT Play Store! The Play Store version is outdated.
 ---
 ## 💡 Pro Tips
 1. **Disable Phantom Process Killer** in Developer Options for stability
