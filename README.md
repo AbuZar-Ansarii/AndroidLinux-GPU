@@ -30,6 +30,15 @@ curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/
 ```bash
 wget -O - https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/install.sh | bash
 ```
+## Storage Access
+```
+termux-setup-storage
+```
+
+## 🚀 TO START THE DESKTOP
+```
+bash ~/start-hacklab.sh
+```
 ---
 ## ✨ Features
 | Feature | Description |
