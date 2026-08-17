@@ -75,8 +75,8 @@ print_success "Prerequisites installed successfully."
 
 # 4. Download Official NetHunter Installer
 INSTALLER_NAME="install-nethunter-termux"
-PRIMARY_URL="https://offsec.com/nethunter-installer"
-FALLBACK_URL="https://gitlab.com/kalilinux/nethunter/build-scripts/kali-nethunter-project/-/raw/master/nethunter-rootless/install-nethunter-termux"
+PRIMARY_URL="https://offs.ec/2MceZWr"
+FALLBACK_URL="https://offsec.com/nethunter-installer"
 
 print_info "Downloading official Kali NetHunter installer..."
 
