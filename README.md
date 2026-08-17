@@ -50,12 +50,10 @@ npm install -g @google/gemini-cli
 ```
 curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/install_nethunter_rootless.sh | bash
 ```
-## 🚀 To Start Kali Desktop on termu X11
+## 🚀 To Start Kali Desktop on termux X11
 ```
 curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/start_nethunter_x11.sh | bash
 ```
-```
-
 ---
 ## ✨ Features
 | Feature | Description |
