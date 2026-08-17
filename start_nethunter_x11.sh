@@ -41,15 +41,7 @@ sleep 2
 echo -e "${GREEN}[+] Opening Termux-X11 app...${NC}"
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
 
-# 6. Check and launch Desktop inside NetHunter
+# 6. Launch Desktop inside NetHunter (Piped execution prevents bash -c option error)
 echo -e "${GREEN}[+] Launching Kali XFCE Desktop session...${NC}"
 
-nethunter -c "
-if ! command -v xfce4-session >/dev/null 2>&1; then
-    echo '[+] XFCE Desktop not found inside Kali. Installing xfce4 & dbus-x11...'
-    apt update && apt install -y xfce4 xfce4-terminal dbus-x11
-fi
-export DISPLAY=:1
-export PULSE_SERVER=127.0.0.1
-dbus-launch --exit-with-session xfce4-session
-"
+echo "export DISPLAY=:1; export PULSE_SERVER=127.0.0.1; dbus-launch --exit-with-session xfce4-session" | nethunter
