@@ -2,22 +2,15 @@
 # ==============================================================================
 # Script Name : install_nethunter_rootless.sh
 # Repository  : AbuZar-Ansarii/AndroidLinux-GPU
-# One-Liner   : curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/install_nethunter_rootless.sh | bash
+# One-Liner   : bash <(curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/install_nethunter_rootless.sh)
+#               OR
+#               curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/install_nethunter_rootless.sh | bash
 # Description : Fully automated single-command installer for Kali NetHunter Rootless on Termux
 # ==============================================================================
 
 set -e
 
-# ------------------------------------------------------------------------------
-# 0. TTY Re-attachment (Crucial for curl | bash)
-# ------------------------------------------------------------------------------
-if [ ! -t 0 ] && [ -c /dev/tty ]; then
-    exec < /dev/tty
-fi
-
-# ------------------------------------------------------------------------------
-# Colors & Formatting
-# ------------------------------------------------------------------------------
+# Terminal Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -42,7 +35,7 @@ print_warning() { echo -e "${YELLOW}[!] $1${NC}"; }
 print_error() { echo -e "${RED}[✘] $1${NC}"; }
 
 # ------------------------------------------------------------------------------
-# 1. Environment & Storage Check
+# 1. Environment & Storage Setup
 # ------------------------------------------------------------------------------
 print_header
 
@@ -57,27 +50,27 @@ fi
 # ------------------------------------------------------------------------------
 print_info "Updating Termux packages and installing dependencies (wget, proot, tar, curl)..."
 export DEBIAN_FRONTEND=noninteractive
-pkg update -y -o Dpkg::Options::="--force-confold" >/dev/null 2>&1 || pkg update -y
+pkg update -y >/dev/null 2>&1 || pkg update -y
 pkg install -y wget proot tar curl >/dev/null 2>&1 || pkg install -y wget proot tar curl
 
-print_success "Dependencies ready."
+print_success "Dependencies installed successfully."
 
 # ------------------------------------------------------------------------------
-# 3. Download Official NetHunter Installer
+# 3. Download Official NetHunter Installer Script
 # ------------------------------------------------------------------------------
 INSTALLER="install-nethunter-termux"
 OFFICIAL_URL="https://offs.ec/2MceZWr"
 FALLBACK_URL="https://offsec.com/nethunter-installer"
 
-print_info "Downloading official Kali NetHunter installer core script..."
+print_info "Downloading official Kali NetHunter installer script..."
 rm -f "$INSTALLER"
 
 if wget -q --no-check-certificate "$OFFICIAL_URL" -O "$INSTALLER"; then
     print_success "Official installer downloaded successfully."
 elif wget -q --no-check-certificate "$FALLBACK_URL" -O "$INSTALLER"; then
-    print_success "Official installer downloaded from secondary mirror."
+    print_success "Official installer downloaded from fallback mirror."
 else
-    print_error "Download failed. Please check your network connection."
+    print_error "Download failed. Please check your internet connection."
     exit 1
 fi
 
@@ -93,7 +86,13 @@ echo -e "  ${CYAN}[2] Minimal${NC}  - Essential CLI penetration testing tools (~
 echo -e "  ${CYAN}[3] Nano${NC}     - Bare minimum lightweight image (~500MB download)"
 echo ""
 
-read -p "Enter your choice [1-3] (Default: 1): " CHOICE
+# Read from /dev/tty if stdin is piped
+if [ -c /dev/tty ]; then
+    read -p "Enter your choice [1-3] (Default: 1): " CHOICE < /dev/tty
+else
+    read -p "Enter your choice [1-3] (Default: 1): " CHOICE
+fi
+
 CHOICE=${CHOICE:-1}
 
 case "$CHOICE" in
@@ -117,17 +116,17 @@ case "$CHOICE" in
 esac
 
 print_info "Selected: ${BOLD}${EDITION_NAME} Edition${NC}"
-print_info "Starting installation... Please do not close Termux."
+print_info "Starting NetHunter installation... Please wait."
 echo ""
 
 # ------------------------------------------------------------------------------
-# 5. Launch Installer with User's Selection
+# 5. Launch Installer with Selected Option
 # ------------------------------------------------------------------------------
-# Feed the chosen image type to the installer while keeping stdin/tty connected
-(echo "$IMAGE_TYPE"; cat) | ./"$INSTALLER"
+# Pipe choice to installer so it installs without hanging
+echo "$IMAGE_TYPE" | ./"$INSTALLER"
 
 # ------------------------------------------------------------------------------
-# 6. Post-Installation Guide
+# 6. Post-Installation Summary & Usage
 # ------------------------------------------------------------------------------
 echo ""
 echo -e "${GREEN}${BOLD}=================================================================="
