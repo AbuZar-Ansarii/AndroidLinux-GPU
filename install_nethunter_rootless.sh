@@ -48,10 +48,11 @@ fi
 # ------------------------------------------------------------------------------
 # 2. Package Updates & Prerequisites
 # ------------------------------------------------------------------------------
-print_info "Updating Termux packages and installing dependencies (wget, proot, tar, curl)..."
+print_info "Updating Termux packages and installing dependencies (x11-repo, wget, proot, tar, curl, termux-x11)..."
 export DEBIAN_FRONTEND=noninteractive
 pkg update -y >/dev/null 2>&1 || pkg update -y
-pkg install -y wget proot tar curl >/dev/null 2>&1 || pkg install -y wget proot tar curl
+pkg install -y x11-repo >/dev/null 2>&1 || pkg install -y x11-repo
+pkg install -y wget proot tar curl termux-x11-nightly >/dev/null 2>&1 || pkg install -y wget proot tar curl termux-x11-nightly
 
 print_success "Dependencies installed successfully."
 
@@ -139,3 +140,10 @@ echo -e "  • Setup Desktop (KeX) Pass:    ${CYAN}nethunter kex passwd${NC}"
 echo -e "  • Launch Desktop (KeX):        ${CYAN}nethunter kex &${NC}"
 echo -e "  • Stop Desktop (KeX):          ${CYAN}nethunter kex stop${NC}"
 echo -e "=================================================================="
+echo -e "${YELLOW}${BOLD}[!] ATTENTION ANDROID 12, 13, 14, 15, 16+ USERS:${NC}"
+echo -e "If NetHunter closes/stops automatically with '[Process completed - signal 9]',"
+echo -e "disable Android's Phantom Process Killer via Wireless Debugging / ADB:"
+echo -e "  ${CYAN}adb shell device_config put activity_manager max_phantom_processes 2147483647${NC}"
+echo -e "  ${CYAN}adb shell settings put global settings_enable_monitor_phantom_procs false${NC}"
+echo -e "=================================================================="
+
