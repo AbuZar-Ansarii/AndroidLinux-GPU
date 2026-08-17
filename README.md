@@ -45,7 +45,7 @@ bash ~/start-hacklab.sh
 pkg install nodejs-lts
 npm install -g @google/gemini-cli
 ```
-## Install Kali linux Nethunter Rootless
+## 🐉Kali Linux Nethunter Rootless Installation
 
 ```
 curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/install_nethunter_rootless.sh | bash
