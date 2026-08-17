@@ -9,7 +9,6 @@ set -e
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
-RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${CYAN}======================================================"
@@ -41,7 +40,7 @@ sleep 2
 echo -e "${GREEN}[+] Opening Termux-X11 app...${NC}"
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
 
-# 6. Launch Desktop inside NetHunter (Piped execution prevents bash -c option error)
+# 6. Launch Desktop inside NetHunter with inline DISPLAY environment variable
 echo -e "${GREEN}[+] Launching Kali XFCE Desktop session...${NC}"
 
-echo "export DISPLAY=:1; export PULSE_SERVER=127.0.0.1; dbus-launch --exit-with-session xfce4-session" | nethunter
+nethunter -c "DISPLAY=:1 PULSE_SERVER=127.0.0.1 dbus-launch --exit-with-session xfce4-session"
