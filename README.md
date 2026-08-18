@@ -45,13 +45,16 @@ bash ~/start-hacklab.sh
 pkg install nodejs-lts
 npm install -g @google/gemini-cli
 ```
-## 🐉Kali Linux Nethunter Rootless Installation
+## 🐉 Kali Linux NetHunter Rootless Installation
 
-```
+```bash
 curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/install_nethunter_rootless.sh | bash
 ```
-## 🚀 To Start Kali Desktop on termux X11
-```
+
+## 🚀 To Start Kali Desktop on Termux-X11
+```bash
+nh-x11
+# or
 curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/start_nethunter_x11.sh | bash
 ```
 ---
