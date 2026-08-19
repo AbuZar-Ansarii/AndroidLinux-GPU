@@ -271,7 +271,7 @@ done
 # ------------------------------------------------------------------------------
 # 9. Create Enhanced & Bulletproof NetHunter PRoot Launchers
 # ------------------------------------------------------------------------------
-print_info "Creating Termux launcher scripts (nh, nethunter, nh-x11)..."
+print_info "Creating Termux launcher scripts (nh, nethunter, kex, nh-x11)..."
 
 LAUNCHER_PATH="$PREFIX/bin/nethunter"
 SHORTCUT_PATH="$PREFIX/bin/nh"
@@ -281,7 +281,6 @@ cat > "$LAUNCHER_PATH" << 'LAUNCHER_EOF'
 cd "${HOME}"
 unset LD_PRELOAD
 
-# Detect CHROOT directory
 if [ -d "${HOME}/kali-arm64" ]; then
     CHROOT="${HOME}/kali-arm64"
 elif [ -d "${HOME}/kali-armhf" ]; then
@@ -315,13 +314,14 @@ chmod 1777 "$TERMUX_TMP/.X11-unix" 2>/dev/null || true
 
 cmdline="proot \
         --link2symlink \
+        --sysvipc \
         -0 \
         -r $CHROOT \
         -b /dev \
         -b /proc \
         -b /sdcard \
         -b $TERMUX_TMP:/tmp \
-        -b $CHROOT$home:/dev/shm \
+        -b $TERMUX_TMP:/dev/shm \
         -w $home \
         /usr/bin/env -i \
         HOME=$home \
@@ -330,23 +330,172 @@ cmdline="proot \
         LANG=C.UTF-8 \
         $start"
 
-cmd="$@"
-if [ "$#" == "0" ]; then
+if [ "$#" -ge 1 ] && [ "$1" = "kex" ]; then
+    shift
+    $cmdline -c "/usr/bin/kex $*"
+elif [ "$#" == "0" ]; then
     exec $cmdline
 else
-    $cmdline -c "$cmd"
+    $cmdline -c "$*"
 fi
 LAUNCHER_EOF
 
 chmod 755 "$LAUNCHER_PATH"
 ln -sf "$LAUNCHER_PATH" "$SHORTCUT_PATH"
 
-# Create in-container desktop script
+# Create Termux kex shortcut command
+cat > "$PREFIX/bin/kex" << 'KEX_SH_EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+nh kex "$@"
+KEX_SH_EOF
+chmod 755 "$PREFIX/bin/kex"
+
+# Create /usr/bin/kex inside Kali container for VNC support
+cat > "$CHROOT_DIR/usr/bin/kex" << 'KEX_SCRIPT_EOF'
+#!/bin/bash
+# ==============================================================================
+# Script Name : kex
+# Description : Kali NetHunter KeX (VNC Desktop Server) Manager
+# ==============================================================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+USR=$(whoami)
+SCREEN=":1"
+PORT="5901"
+if [ "$USR" = "root" ]; then
+    SCREEN=":2"
+    PORT="5902"
+fi
+export USER="$USR"
+
+function check_vnc_installed() {
+    if ! command -v vncserver >/dev/null 2>&1 || ! command -v vncpasswd >/dev/null 2>&1; then
+        echo -e "${YELLOW}[!] VNC server packages missing. Installing TigerVNC & XFCE4...${NC}"
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            tigervnc-standalone-server \
+            tigervnc-tools \
+            xfce4 \
+            xfce4-terminal \
+            dbus-x11 \
+            kali-themes \
+            kali-menu
+    fi
+}
+
+function setup_vnc_config() {
+    mkdir -p "$HOME/.vnc"
+    cat > "$HOME/.vnc/xstartup" << 'XSEOF'
+#!/bin/sh
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+export DISPLAY=:1
+export XDG_RUNTIME_DIR=/tmp
+export LIBGL_ALWAYS_SOFTWARE=1
+export GALLIUM_DRIVER=llvmpipe
+export QT_X11_NO_MITSHM=1
+export _X11_NO_MITSHM=1
+export MITSHM=0
+export GDK_RENDERING=image
+export NO_AT_BRIDGE=1
+
+[ -r $HOME/.Xresources ] && xrdb $HOME/.Xresources 2>/dev/null || true
+dbus-launch --exit-with-session startxfce4 &
+XSEOF
+    chmod 755 "$HOME/.vnc/xstartup"
+}
+
+function passwd_kex() {
+    check_vnc_installed
+    mkdir -p "$HOME/.vnc"
+    echo -e "${CYAN}${BOLD}[+] Set your NetHunter KeX (VNC) Password (min 6 chars):${NC}"
+    vncpasswd "$HOME/.vnc/passwd"
+    chmod 600 "$HOME/.vnc/passwd" 2>/dev/null || true
+    echo -e "${GREEN}[✔] KeX password configured successfully!${NC}"
+}
+
+function start_kex() {
+    check_vnc_installed
+    setup_vnc_config
+
+    if [ ! -f "$HOME/.vnc/passwd" ]; then
+        echo -e "${YELLOW}[!] No KeX password found. Please create one now:${NC}"
+        passwd_kex
+    fi
+
+    # Clean old locks
+    vncserver -kill "$SCREEN" 2>/dev/null || true
+    rm -f "/tmp/.X11-unix/X${SCREEN#:}" "/tmp/.X${SCREEN#:}-lock" 2>/dev/null || true
+
+    echo -e "${GREEN}[+] Starting NetHunter KeX VNC server on display $SCREEN (Port: $PORT)...${NC}"
+    vncserver "$SCREEN" -geometry 1280x720 -depth 24 -localhost no -extension MIT-SHM 2>/dev/null || \
+    vncserver "$SCREEN" -geometry 1280x720 -depth 24 -localhost no
+
+    echo ""
+    echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}${BOLD}  🎉 KALI NETHUNTER KEX (VNC) SERVER IS READY! 🎉${NC}"
+    echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════════${NC}"
+    echo -e "  ${BOLD}📱 App:${NC}      NetHunter KeX / RealVNC / RVNC / AVNC Viewer"
+    echo -e "  ${BOLD}🌐 Address:${NC}  ${CYAN}127.0.0.1:${PORT}${NC}  (or ${CYAN}localhost:${PORT}${NC})"
+    echo -e "  ${BOLD}🔑 Password:${NC} (The password you configured)"
+    echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════════${NC}"
+    echo -e "  • Stop KeX:  ${YELLOW}nh kex stop${NC}  or  ${YELLOW}kex stop${NC}"
+    echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════════${NC}"
+    echo ""
+}
+
+function stop_kex() {
+    echo -e "${YELLOW}[*] Stopping NetHunter KeX VNC Server...${NC}"
+    vncserver -kill :1 2>/dev/null || true
+    vncserver -kill :2 2>/dev/null || true
+    pkill -9 -f "Xtigervnc" 2>/dev/null || true
+    rm -f /tmp/.X11-unix/X1 /tmp/.X11-unix/X2 /tmp/.X1-lock /tmp/.X2-lock 2>/dev/null || true
+    echo -e "${GREEN}[✔] KeX VNC server stopped.${NC}"
+}
+
+function status_kex() {
+    check_vnc_installed
+    vncserver -list
+}
+
+case "$1" in
+    passwd|password)
+        passwd_kex
+        ;;
+    stop|kill)
+        stop_kex
+        ;;
+    status)
+        status_kex
+        ;;
+    start|"")
+        start_kex
+        ;;
+    *)
+        start_kex
+        ;;
+esac
+KEX_SCRIPT_EOF
+chmod 755 "$CHROOT_DIR/usr/bin/kex"
+cp -f "$CHROOT_DIR/usr/bin/kex" "$CHROOT_DIR/usr/local/bin/kex" 2>/dev/null || true
+
+# Create in-container desktop script for Termux-X11
 cat > "$CHROOT_DIR/usr/local/bin/start-kali-desktop" << 'DESKTOPEOF'
 #!/bin/bash
 export DISPLAY=:0
 export PULSE_SERVER=127.0.0.1
 export XDG_RUNTIME_DIR=/tmp
+export QT_X11_NO_MITSHM=1
+export _X11_NO_MITSHM=1
+export MITSHM=0
+export GDK_RENDERING=image
+export NO_AT_BRIDGE=1
 export LIBGL_ALWAYS_SOFTWARE=1
 export GALLIUM_DRIVER=llvmpipe
 export MESA_GL_VERSION_OVERRIDE=3.3
@@ -387,16 +536,16 @@ chmod 755 "$PREFIX/bin/nh-x11"
 ln -sf "$PREFIX/bin/nh-x11" "$PREFIX/bin/nethunter-x11" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 10. Install Desktop Packages inside Kali
+# 10. Install Desktop & VNC Packages inside Kali
 # ------------------------------------------------------------------------------
-print_info "Configuring user permissions and installing XFCE Desktop in Kali..."
+print_info "Configuring user permissions inside Kali..."
 "$SHORTCUT_PATH" -r "
     usermod -u $TERMUX_UID kali 2>/dev/null || true
     groupmod -g $TERMUX_GID kali 2>/dev/null || true
     chown -R kali:kali /home/kali 2>/dev/null || true
 " || true
 
-print_info "Installing XFCE4 desktop packages inside Kali rootfs..."
+print_info "Installing XFCE4 Desktop & TigerVNC packages inside Kali..."
 "$SHORTCUT_PATH" -r "
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -406,7 +555,8 @@ print_info "Installing XFCE4 desktop packages inside Kali rootfs..."
         kali-themes \
         kali-menu \
         x11-xserver-utils \
-        tigervnc-standalone-server 2>/dev/null || true
+        tigervnc-standalone-server \
+        tigervnc-tools 2>/dev/null || true
 " || true
 
 # ------------------------------------------------------------------------------
@@ -449,10 +599,19 @@ cat << 'COMPLETE'
 ╚═══════════════════════════════════════════════════════════════╝
 COMPLETE
 echo -e "${NC}"
-echo -e "${BOLD}🚀 How to Launch Kali NetHunter:${NC}"
-echo -e "  • Start NetHunter CLI (User):  ${CYAN}nh${NC} or ${CYAN}nethunter${NC}"
-echo -e "  • Start NetHunter CLI (Root):  ${CYAN}nh -r${NC} or ${CYAN}nethunter -r${NC}"
-echo -e "  • Start Kali Desktop (X11):    ${GREEN}nh-x11${NC} or ${GREEN}bash ~/start_nethunter_x11.sh${NC}"
+echo -e "${BOLD}🚀 How to Use Kali NetHunter:${NC}"
+echo ""
+echo -e "  ${CYAN}${BOLD}[ CLI Mode ]${NC}"
+echo -e "  • Start NetHunter CLI (User):  ${WHITE}nh${NC} or ${WHITE}nethunter${NC}"
+echo -e "  • Start NetHunter CLI (Root):  ${WHITE}nh -r${NC} or ${WHITE}nethunter -r${NC}"
+echo ""
+echo -e "  ${GREEN}${BOLD}[ Mode 1: Termux-X11 Desktop (Fast 60fps) ]${NC}"
+echo -e "  • Launch Desktop:              ${GREEN}nh-x11${NC} or ${GREEN}bash ~/start_nethunter_x11.sh${NC}"
+echo ""
+echo -e "  ${PURPLE}${BOLD}[ Mode 2: NetHunter KeX (VNC / RealVNC / RVNC / AVNC) ]${NC}"
+echo -e "  • Set VNC Password:            ${PURPLE}nh kex passwd${NC}"
+echo -e "  • Start VNC Server:            ${PURPLE}nh kex &${NC} (Connect to 127.0.0.1:5901)"
+echo -e "  • Stop VNC Server:             ${PURPLE}nh kex stop${NC}"
 echo ""
 echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${YELLOW}${BOLD}[!] ATTENTION ANDROID 12, 13, 14, 15, 16+ USERS:${NC}"

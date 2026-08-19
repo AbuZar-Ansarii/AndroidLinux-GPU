@@ -45,18 +45,41 @@ bash ~/start-hacklab.sh
 pkg install nodejs-lts
 npm install -g @google/gemini-cli
 ```
-## 🐉 Kali Linux NetHunter Rootless Installation
+## 🐉 Kali Linux NetHunter Rootless
 
+### 📥 1. Installation
 ```bash
 curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/install_nethunter_rootless.sh | bash
 ```
 
-## 🚀 To Start Kali Desktop on Termux-X11
+### 🖥️ Option A: Termux-X11 Desktop (Fast 60fps Native UI)
 ```bash
 nh-x11
 # or
 curl -sL https://raw.githubusercontent.com/AbuZar-Ansarii/AndroidLinux-GPU/main/start_nethunter_x11.sh | bash
 ```
+
+### 📱 Option B: NetHunter KeX (VNC / RealVNC / RVNC / AVNC)
+1. **Set VNC Password (run once):**
+   ```bash
+   nh kex passwd
+   ```
+2. **Start VNC Desktop Server:**
+   ```bash
+   nh kex &
+   ```
+3. **Connect with any VNC Client:**
+   - **Host/Address:** `127.0.0.1:5901` (or `localhost:5901`)
+   - **Password:** (Your KeX password)
+4. **Stop VNC Desktop Server:**
+   ```bash
+   nh kex stop
+   ```
+
+### 💻 CLI Access
+- **Normal user:** `nh` or `nethunter`
+- **Root user:** `nh -r` or `nethunter -r`
+
 ---
 ## ✨ Features
 | Feature | Description |
