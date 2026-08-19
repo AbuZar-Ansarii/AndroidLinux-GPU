@@ -216,11 +216,22 @@ if [ -z "$SKIP_DOWNLOAD" ]; then
     # 7. Extract Rootfs Image
     # --------------------------------------------------------------------------
     print_info "Extracting Kali NetHunter rootfs... (This may take 2-5 minutes)"
-    proot --link2symlink tar -xf "$IMAGE_NAME" 2>/dev/null || tar -xf "$IMAGE_NAME" 2>/dev/null || {
-        print_error "Extraction failed! The archive may be corrupted."
-        exit 1
-    }
-    print_success "Rootfs extracted successfully."
+    proot --link2symlink tar -xf "$IMAGE_NAME" 2>/dev/null || tar -xf "$IMAGE_NAME" 2>/dev/null || true
+
+    # Verify extraction succeeded by checking rootfs binaries
+    if [ -f "$CHROOT_DIR/usr/bin/bash" ] || [ -f "$CHROOT_DIR/bin/bash" ] || [ -f "$CHROOT_DIR/bin/sh" ]; then
+        print_success "Rootfs extracted successfully."
+    else
+        print_warning "Standard extraction check failed. Retrying direct archive extraction..."
+        tar --exclude='dev/*' -xf "$IMAGE_NAME" 2>/dev/null || tar -xf "$IMAGE_NAME" 2>/dev/null || true
+        if [ -f "$CHROOT_DIR/usr/bin/bash" ] || [ -f "$CHROOT_DIR/bin/bash" ] || [ -f "$CHROOT_DIR/bin/sh" ]; then
+            print_success "Rootfs extracted successfully on fallback attempt."
+        else
+            print_error "Extraction failed! Could not find rootfs binaries."
+            print_error "The downloaded archive ($IMAGE_NAME) may be incomplete. Please run the installer again to re-download."
+            exit 1
+        fi
+    fi
 fi
 
 # ------------------------------------------------------------------------------
