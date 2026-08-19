@@ -68,9 +68,9 @@ print_info "Installing X11 repository..."
 pkg install -y x11-repo || apt-get install -y x11-repo || true
 pkg update -y || apt-get update -y || true
 
-# Install all essential Termux tools
-print_info "Installing essential tools (proot, tar, axel, xz-utils, wget, curl, termux-x11, pulseaudio)..."
-for PKG in proot tar axel xz-utils wget curl pulseaudio; do
+# Install all essential Termux tools (including android-tools for Signal 9 fix)
+print_info "Installing essential tools (proot, tar, axel, xz-utils, wget, curl, termux-x11, pulseaudio, android-tools)..."
+for PKG in proot tar axel xz-utils wget curl pulseaudio android-tools; do
     if ! dpkg -s "$PKG" >/dev/null 2>&1; then
         pkg install -y "$PKG" || apt-get install -y "$PKG" || true
     fi
@@ -271,7 +271,7 @@ done
 # ------------------------------------------------------------------------------
 # 9. Create Enhanced & Bulletproof NetHunter PRoot Launchers
 # ------------------------------------------------------------------------------
-print_info "Creating Termux launcher scripts (nh, nethunter, kex, nh-x11)..."
+print_info "Creating Termux launcher scripts (nh, nethunter, kex, nh-x11, fix-signal9)..."
 
 LAUNCHER_PATH="$PREFIX/bin/nethunter"
 SHORTCUT_PATH="$PREFIX/bin/nh"
@@ -535,6 +535,98 @@ NHX11_EOF
 chmod 755 "$PREFIX/bin/nh-x11"
 ln -sf "$PREFIX/bin/nh-x11" "$PREFIX/bin/nethunter-x11" 2>/dev/null || true
 
+# Create fix-signal9 / fix-phantom helper tool in PATH
+cat > "$PREFIX/bin/fix-signal9" << 'FIX_SIG9_EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+# ==============================================================================
+# Helper Script : fix-signal9 (Disables Android Phantom Process Killer)
+# ==============================================================================
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+clear
+echo -e "${CYAN}${BOLD}"
+cat << 'SIG9_BANNER'
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║      ⚙️  ANDROID PHANTOM PROCESS KILLER FIX (SIGNAL 9) ⚙️      ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+SIG9_BANNER
+echo -e "${NC}"
+echo -e "${WHITE}This tool disables Android's 32-process limit that kills NetHunter.${NC}"
+echo ""
+
+# Ensure android-tools is installed
+if ! command -v adb >/dev/null 2>&1; then
+    echo -e "${YELLOW}[+] Installing android-tools (ADB)...${NC}"
+    pkg install -y android-tools || true
+fi
+
+echo -e "${YELLOW}${BOLD}Select how to apply the fix:${NC}"
+echo -e "  ${CYAN}[1] Wireless Debugging (On-device, No PC needed)${NC}"
+echo -e "  ${CYAN}[2] Connected ADB (Already connected via PC or Shizuku)${NC}"
+echo -e "  ${CYAN}[3] Root mode (If phone is rooted / su available)${NC}"
+echo -e "  ${CYAN}[0] Exit${NC}"
+echo ""
+read -p "Select option [1-3]: " ADB_CHOICE
+
+case "$ADB_CHOICE" in
+    1)
+        echo ""
+        echo -e "${YELLOW}${BOLD}Steps for Wireless Debugging:${NC}"
+        echo -e "  1. Open Android ${WHITE}Settings -> Developer Options${NC}"
+        echo -e "  2. Enable ${WHITE}Wireless Debugging${NC}"
+        echo -e "  3. Tap 'Wireless Debugging' -> 'Pair device with pairing code'"
+        echo ""
+        read -p "Enter Pairing Port (e.g. 37829): " PAIR_PORT
+        read -p "Enter 6-digit Pairing Code: " PAIR_CODE
+        
+        echo -e "${BLUE}[+] Pairing with ADB...${NC}"
+        adb pair "localhost:$PAIR_PORT" "$PAIR_CODE"
+        
+        echo ""
+        read -p "Enter Wireless Debugging Connect Port (from main Wireless Debugging screen): " CONNECT_PORT
+        echo -e "${BLUE}[+] Connecting to ADB...${NC}"
+        adb connect "localhost:$CONNECT_PORT"
+        
+        echo -e "${BLUE}[+] Applying Phantom Process Killer fix...${NC}"
+        adb shell "/system/bin/device_config put activity_manager max_phantom_processes 2147483647" 2>/dev/null || adb shell "device_config put activity_manager max_phantom_processes 2147483647"
+        adb shell "/system/bin/settings put global settings_enable_monitor_phantom_procs false" 2>/dev/null || adb shell "settings put global settings_enable_monitor_phantom_procs false"
+        adb shell "/system/bin/device_config set_sync_disabled_for_tests persistent" 2>/dev/null || true
+        
+        echo -e "${GREEN}${BOLD}[✔] SUCCESS! Android Phantom Process Killer has been disabled!${NC}"
+        ;;
+    2)
+        echo -e "${BLUE}[+] Applying fix through connected ADB...${NC}"
+        adb shell "device_config put activity_manager max_phantom_processes 2147483647"
+        adb shell "settings put global settings_enable_monitor_phantom_procs false"
+        adb shell "device_config set_sync_disabled_for_tests persistent" 2>/dev/null || true
+        echo -e "${GREEN}${BOLD}[✔] SUCCESS! Phantom process killer disabled!${NC}"
+        ;;
+    3)
+        if command -v su >/dev/null 2>&1; then
+            su -c "/system/bin/device_config put activity_manager max_phantom_processes 2147483647 && /system/bin/settings put global settings_enable_monitor_phantom_procs false"
+            echo -e "${GREEN}${BOLD}[✔] SUCCESS! Applied fix via root su.${NC}"
+        else
+            echo -e "${RED}[✘] 'su' binary not found. Phone does not appear to have root access.${NC}"
+        fi
+        ;;
+    *)
+        echo -e "${YELLOW}Cancelled.${NC}"
+        exit 0
+        ;;
+esac
+FIX_SIG9_EOF
+chmod 755 "$PREFIX/bin/fix-signal9"
+ln -sf "$PREFIX/bin/fix-signal9" "$PREFIX/bin/fix-phantom" 2>/dev/null || true
+ln -sf "$PREFIX/bin/fix-signal9" "$PREFIX/bin/nh-fix-phantom" 2>/dev/null || true
+
 # ------------------------------------------------------------------------------
 # 10. Install Desktop & VNC Packages inside Kali
 # ------------------------------------------------------------------------------
@@ -613,9 +705,14 @@ echo -e "  • Set VNC Password:            ${PURPLE}nh kex passwd${NC}"
 echo -e "  • Start VNC Server:            ${PURPLE}nh kex &${NC} (Connect to 127.0.0.1:5901)"
 echo -e "  • Stop VNC Server:             ${PURPLE}nh kex stop${NC}"
 echo ""
+echo -e "  ${YELLOW}${BOLD}[ Android 12, 13, 14, 15, 16+ Phantom Process Fix (Signal 9) ]${NC}"
+echo -e "  • Run On-Device ADB Fix:       ${YELLOW}fix-signal9${NC} or ${YELLOW}fix-phantom${NC}"
+echo ""
 echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${YELLOW}${BOLD}[!] ATTENTION ANDROID 12, 13, 14, 15, 16+ USERS:${NC}"
-echo -e "If NetHunter exits with '[Process completed - signal 9]', run once via ADB/Shizuku:"
+echo -e "If NetHunter exits with '[Process completed - signal 9]', simply type:"
+echo -e "  ${GREEN}fix-signal9${NC}"
+echo -e "Or run via PC ADB / Shizuku:"
 echo -e "  ${CYAN}adb shell device_config put activity_manager max_phantom_processes 2147483647${NC}"
 echo -e "  ${CYAN}adb shell settings put global settings_enable_monitor_phantom_procs false${NC}"
 echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

@@ -203,6 +203,7 @@ step_apps() {
     install_pkg "git" "Git Version Control"
     install_pkg "wget" "Wget Downloader"
     install_pkg "curl" "cURL"
+    install_pkg "android-tools" "Android Tools (ADB / Signal 9 Fix)"
 }
 # ============== STEP 8: INSTALL NETWORK TOOLS ==============
 step_network_tools() {
@@ -391,6 +392,32 @@ echo "Desktop stopped."
 STOPEOF
     chmod +x ~/stop-hacklab.sh
     echo -e "  ${GREEN}✓${NC} Created ~/stop-hacklab.sh"
+
+    # Android Signal 9 Fix Script
+    cat > "$PREFIX/bin/fix-signal9" << 'SIG9EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+clear
+echo "=================================================================="
+echo "      ⚙️  ANDROID PHANTOM PROCESS KILLER FIX (SIGNAL 9) ⚙️"
+echo "=================================================================="
+echo "Disables Android background process killing via Wireless Debugging/ADB."
+echo ""
+if ! command -v adb >/dev/null 2>&1; then
+    pkg install -y android-tools || true
+fi
+read -p "Enter Pairing Port (from Wireless Debugging -> Pair): " P_PORT
+read -p "Enter 6-digit Pairing Code: " P_CODE
+adb pair "localhost:$P_PORT" "$P_CODE"
+read -p "Enter Connect Port (from main Wireless Debugging screen): " C_PORT
+adb connect "localhost:$C_PORT"
+adb shell "device_config put activity_manager max_phantom_processes 2147483647"
+adb shell "settings put global settings_enable_monitor_phantom_procs false"
+adb shell "device_config set_sync_disabled_for_tests persistent" 2>/dev/null || true
+echo "✅ Phantom process killer disabled! Signal 9 fixed."
+SIG9EOF
+    chmod +x "$PREFIX/bin/fix-signal9"
+    cp -f "$PREFIX/bin/fix-signal9" ~/fix-signal9.sh 2>/dev/null || true
+    echo -e "  ${GREEN}✓${NC} Created fix-signal9 command"
 }
 # ============== STEP 13: CREATE DESKTOP SHORTCUTS ==============
 step_shortcuts() {
