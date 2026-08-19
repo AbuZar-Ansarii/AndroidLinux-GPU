@@ -47,6 +47,13 @@ if command -v termux-setup-storage >/dev/null 2>&1; then
     termux-setup-storage || true
 fi
 
+# Enable external app interaction for Termux-X11
+mkdir -p "$HOME/.termux"
+if ! grep -q "allow-external-apps" "$HOME/.termux/termux.properties" 2>/dev/null; then
+    echo "allow-external-apps = true" >> "$HOME/.termux/termux.properties"
+    termux-reload-settings 2>/dev/null || true
+fi
+
 # ------------------------------------------------------------------------------
 # 2. Package Updates & Prerequisites Installation
 # ------------------------------------------------------------------------------
@@ -229,11 +236,11 @@ nameserver 1.1.1.1
 nameserver 8.8.4.4
 DNSEOF
 
-# Fix Sudo permissions
+# Fix Sudo permissions (Passwordless sudo for automated launch)
 chmod +s "$CHROOT_DIR/usr/bin/sudo" 2>/dev/null || true
 chmod +s "$CHROOT_DIR/usr/bin/su" 2>/dev/null || true
 mkdir -p "$CHROOT_DIR/etc/sudoers.d"
-echo "kali    ALL=(ALL:ALL) ALL" > "$CHROOT_DIR/etc/sudoers.d/kali" 2>/dev/null || true
+echo "kali    ALL=(ALL:ALL) NOPASSWD: ALL" > "$CHROOT_DIR/etc/sudoers.d/kali" 2>/dev/null || true
 chmod 0440 "$CHROOT_DIR/etc/sudoers.d/kali" 2>/dev/null || true
 echo "Set disable_coredump false" > "$CHROOT_DIR/etc/sudo.conf" 2>/dev/null || true
 
@@ -249,9 +256,9 @@ if [ ! -s "$CHROOT_DIR/etc/machine-id" ]; then
 fi
 
 # Disable XFWM4 compositing inside Kali to permanently prevent black screen
-mkdir -p "$CHROOT_DIR/home/kali/.config/xfce4/xfconf/xfce-perchannel-xml"
-mkdir -p "$CHROOT_DIR/root/.config/xfce4/xfconf/xfce-perchannel-xml"
-cat > "$CHROOT_DIR/home/kali/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" << 'XFWM_EOF'
+for U_DIR in "$CHROOT_DIR/home/kali" "$CHROOT_DIR/root"; do
+    mkdir -p "$U_DIR/.config/xfce4/xfconf/xfce-perchannel-xml"
+    cat > "$U_DIR/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" << 'XFWM_EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfwm4" version="1.0">
   <property name="general" type="empty">
@@ -259,7 +266,7 @@ cat > "$CHROOT_DIR/home/kali/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml"
   </property>
 </channel>
 XFWM_EOF
-cp -f "$CHROOT_DIR/home/kali/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" "$CHROOT_DIR/root/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" 2>/dev/null || true
+done
 
 # ------------------------------------------------------------------------------
 # 9. Create Enhanced & Bulletproof NetHunter PRoot Launchers
@@ -334,6 +341,39 @@ LAUNCHER_EOF
 chmod 755 "$LAUNCHER_PATH"
 ln -sf "$LAUNCHER_PATH" "$SHORTCUT_PATH"
 
+# Create in-container desktop script
+cat > "$CHROOT_DIR/usr/local/bin/start-kali-desktop" << 'DESKTOPEOF'
+#!/bin/bash
+export DISPLAY=:0
+export PULSE_SERVER=127.0.0.1
+export XDG_RUNTIME_DIR=/tmp
+export LIBGL_ALWAYS_SOFTWARE=1
+export GALLIUM_DRIVER=llvmpipe
+export MESA_GL_VERSION_OVERRIDE=3.3
+export MESA_GLES_VERSION_OVERRIDE=3.0
+export XFCE4_SESSION_DISABLE_SAVED_SESSIONS=1
+
+# Ensure /tmp permissions
+mkdir -p /tmp/.X11-unix 2>/dev/null || true
+chmod 1777 /tmp 2>/dev/null || true
+chmod 1777 /tmp/.X11-unix 2>/dev/null || true
+dbus-uuidgen --ensure 2>/dev/null || true
+
+# Disable compositor in running session
+xfconf-query -c xfwm4 -p /general/use_compositing -s false 2>/dev/null || true
+
+# Launch XFCE Desktop Session with DBus
+if command -v startxfce4 >/dev/null 2>&1; then
+    exec dbus-launch --exit-with-session startxfce4
+elif command -v xfce4-session >/dev/null 2>&1; then
+    exec dbus-launch --exit-with-session xfce4-session
+else
+    echo "Error: Neither startxfce4 nor xfce4-session found!"
+    exit 1
+fi
+DESKTOPEOF
+chmod 755 "$CHROOT_DIR/usr/local/bin/start-kali-desktop"
+
 # Create shortcut command nh-x11 in PATH
 cat > "$PREFIX/bin/nh-x11" << 'NHX11_EOF'
 #!/data/data/com.termux/files/usr/bin/bash
@@ -347,13 +387,26 @@ chmod 755 "$PREFIX/bin/nh-x11"
 ln -sf "$PREFIX/bin/nh-x11" "$PREFIX/bin/nethunter-x11" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 10. Install Desktop Packages inside Kali if missing
+# 10. Install Desktop Packages inside Kali
 # ------------------------------------------------------------------------------
-print_info "Verifying Kali XFCE desktop & dependencies inside container..."
+print_info "Configuring user permissions and installing XFCE Desktop in Kali..."
 "$SHORTCUT_PATH" -r "
     usermod -u $TERMUX_UID kali 2>/dev/null || true
     groupmod -g $TERMUX_GID kali 2>/dev/null || true
     chown -R kali:kali /home/kali 2>/dev/null || true
+" || true
+
+print_info "Installing XFCE4 desktop packages inside Kali rootfs..."
+"$SHORTCUT_PATH" -r "
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        xfce4 \
+        xfce4-terminal \
+        dbus-x11 \
+        kali-themes \
+        kali-menu \
+        x11-xserver-utils \
+        tigervnc-standalone-server 2>/dev/null || true
 " || true
 
 # ------------------------------------------------------------------------------
